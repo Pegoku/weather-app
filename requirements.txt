@@ -1,0 +1,6 @@
+Flask==1.1.2
+requests==2.25.1
+jinja2==2.11.3
+markupsafe==1.1.1
+itsdangerous==1.1.0
+Werkzeug==0.16.1
