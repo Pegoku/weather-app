@@ -22,35 +22,45 @@ def create_db_and_table():
 def get_weather_today():
     conn = sqlite3.connect('weather.db')
     c = conn.cursor()
-    c.execute("SELECT date FROM weather_today ORDER BY date DESC LIMIT 1")
-    last_entry = c.fetchone()
+    c.execute("SELECT date FROM weather_today ORDER BY date ASC LIMIT 1") 
+    first_entry = c.fetchone()
     conn.close()
 
-    if last_entry:
-        # Adjusted to match the format including hours, minutes, and seconds
-        last_date = datetime.strptime(last_entry[0], "%Y-%m-%d %H")
+    if first_entry:
+        first_date = datetime.strptime(first_entry[0], "%Y-%m-%d %H:%M:%S")
         current_date = datetime.now()
-        time_difference = current_date - last_date
+        time_difference = current_date - first_date
         if time_difference.total_seconds() < 18000:  # 5 hours
+            print("Data is up to date")
             return None
 
-    complete_url = f"{BASE_URL}weather?q={CITY_NAME}&appid={API_KEY}&units=metric"
+    complete_url = f"{BASE_URL}forecast?q={CITY_NAME}&appid={API_KEY}&units=metric&cnt=5"
     response = requests.get(complete_url)
     weather_data = response.json()
-    if weather_data['cod'] == 200:
-        temperature = weather_data['main']['temp']
-        description = weather_data['weather'][0]['description']
-        # Adjusted to include hours, minutes, and seconds
-        date = datetime.now().strftime("%Y-%m-%d %H")
-        city = CITY_NAME
-        # Store in DB
+
+    print("Pulling data from API")
+
+    if weather_data['cod'] == "200":
         conn = sqlite3.connect('weather.db')
         c = conn.cursor()
-        c.execute("INSERT INTO weather_today (date, city, temperature, description) VALUES (?, ?, ?, ?)",
-                  (date, city, temperature, description))
+
+        c.execute("DELETE FROM weather_today")
+        conn.commit()
+
+        for forecast in weather_data['list']:
+            date = forecast['dt_txt']
+            temperature = forecast['main']['temp']
+            description = forecast['weather'][0]['description']
+            city = CITY_NAME
+            c.execute("INSERT INTO weather_today (date, city, temperature, description) VALUES (?, ?, ?, ?)",
+                      (date, city, temperature, description))
+
         conn.commit()
         conn.close()
-        return {"temperature": temperature, "description": description}
+        print("Data stored in DB")
+
+        first_forecast = weather_data['list'][0]
+        return {"temperature": first_forecast['main']['temp'], "description": first_forecast['weather'][0]['description']}
     else:
         return None
 
