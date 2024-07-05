@@ -5,3 +5,4 @@ lib64
 .history
 pyvenv.cfg
 testing
+weather.db

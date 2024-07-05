@@ -34,7 +34,7 @@ def get_weather_today():
             print("Data is up to date")
             return None
 
-    complete_url = f"{BASE_URL}forecast?q={CITY_NAME}&appid={API_KEY}&units=metric&cnt=5"
+    complete_url = f"{BASE_URL}forecast?q={CITY_NAME}&appid={API_KEY}&units=metric&cnt=9"
     response = requests.get(complete_url)
     weather_data = response.json()
 
