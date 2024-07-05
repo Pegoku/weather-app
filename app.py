@@ -19,20 +19,7 @@ def create_db_and_table():
     conn.commit()
     conn.close()
 
-def get_weather_today():
-    conn = sqlite3.connect('weather.db')
-    c = conn.cursor()
-    c.execute("SELECT date FROM weather_today ORDER BY date ASC LIMIT 1") 
-    first_entry = c.fetchone()
-    conn.close()
-
-    if first_entry:
-        first_date = datetime.strptime(first_entry[0], "%Y-%m-%d %H:%M:%S")
-        current_date = datetime.now()
-        time_difference = current_date - first_date
-        if time_difference.total_seconds() < 18000:  # 5 hours
-            print("Data is up to date")
-            return None
+def get_weather_today_api():
 
     complete_url = f"{BASE_URL}forecast?q={CITY_NAME}&appid={API_KEY}&units=metric&cnt=9"
     response = requests.get(complete_url)
@@ -64,6 +51,53 @@ def get_weather_today():
     else:
         return None
 
+
+def get_weather_today_db():
+    conn = sqlite3.connect('weather.db')
+    c = conn.cursor()
+
+    # Execute the SELECT query to fetch all records from weather_today table
+    c.execute("SELECT date, city, temperature, description FROM weather_today")
+    
+    # Fetch all rows of the query result
+    weather_data = c.fetchall()
+
+    conn.close()
+
+    # Convert the fetched data into a structured format
+    weather_list = []
+    for row in weather_data:
+        weather_dict = {
+            "date": row[0],
+            "city": row[1],
+            "temperature": row[2],
+            "description": row[3]
+        }
+        weather_list.append(weather_dict)
+
+    return weather_list
+    
+
+def get_weather_today():
+    conn = sqlite3.connect('weather.db')
+    c = conn.cursor()
+    c.execute("SELECT date FROM weather_today ORDER BY date ASC LIMIT 1") 
+    first_entry = c.fetchone()
+    conn.close()
+
+    if first_entry:
+        first_date = datetime.strptime(first_entry[0], "%Y-%m-%d %H:%M:%S")
+        current_date = datetime.now()
+        time_difference = current_date - first_date
+        if time_difference.total_seconds() < 18000:  # 5 hours
+            print("Data is up to date")
+            return get_weather_today_db()
+        else:
+            print("Data is not up to date")
+            return get_weather_today_api()
+    
+    return get_weather_today_api()
+
 @app.route('/')
 def home():
     return render_template('home.html')
@@ -71,6 +105,10 @@ def home():
 @app.route('/today')
 def today_weather():
     weather_data = get_weather_today()
+    if weather_data is None:
+        # Handle the case where weather_data is None by using an empty list
+        weather_data = []
+    print(weather_data)
     return render_template('today.html', weather_data=weather_data)
 
 @app.route('/week')
